@@ -22,6 +22,7 @@ var templates = template.Must(template.ParseFiles(
 ))
 
 var validPath = regexp.MustCompile(`^/(view|edit|save)/([a-zA-Z0-9/\-_]+)$`)
+var wikiLinks = regexp.MustCompile(`^\[[a-zA-Z0-9/\-_]+\]$`)
 
 // Page data structure representing a wiki page
 type Page struct {
@@ -78,6 +79,11 @@ func viewHandler(w http.ResponseWriter, r *http.Request, title string) {
 		http.Redirect(w, r, "/edit/"+title, http.StatusFound)
 		return
 	}
+	search := regexp.MustCompile("\\[[a-zA-Z]+\\]")
+	p.Body = search.ReplaceAllFunc(p.Body, func(s []byte) []byte {
+		m := string(s[1 : len(s)-1])
+		return []byte(`<a href="/view/` + m + `">[` + m + `]</a>`)
+	})
 	renderTemplate(w, "view", p)
 }
 
