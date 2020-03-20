@@ -7,12 +7,18 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
+	"path/filepath"
 	"regexp"
+	"strings"
 )
 
+var dataPath = filepath.Join(".", "data")
+var templatePath = filepath.Join(".", "tmpl")
+
 var templates = template.Must(template.ParseFiles(
-	"./tmpl/view.html",
-	"./tmpl/edit.html",
+	filepath.Join(templatePath, "view.html"),
+	filepath.Join(templatePath, "edit.html"),
 ))
 
 var validPath = regexp.MustCompile(`^/(view|edit|save)/([a-zA-Z0-9/\-_]+)$`)
@@ -24,12 +30,18 @@ type Page struct {
 }
 
 func (p *Page) save() error {
-	filename := p.Title + ".txt"
+	filename := filepath.Join(dataPath, p.Title+".txt")
+
+	// Create a directory if it does not exist
+	segments := strings.Split(filename, string(os.PathSeparator))
+	filepath := strings.Join(segments[:len(segments)-1], string(os.PathSeparator))
+	os.MkdirAll(filepath, os.ModePerm)
+
 	return ioutil.WriteFile(filename, p.Body, 0600)
 }
 
 func loadPage(title string) (*Page, error) {
-	filename := title + ".txt"
+	filename := filepath.Join(dataPath, title+".txt")
 	body, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return nil, err
@@ -43,7 +55,6 @@ func getTitle(w http.ResponseWriter, r *http.Request) (string, error) {
 		http.NotFound(w, r)
 		return "", errors.New("invalid Page Title")
 	}
-	fmt.Println(m)
 	return m[2], nil
 }
 
